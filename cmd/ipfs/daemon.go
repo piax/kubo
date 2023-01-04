@@ -643,9 +643,9 @@ func serveHTTPApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error
 		}
 
 		apiLis, err := manet.Listen(apiMaddr)
-		if err != nil {
-			return nil, fmt.Errorf("serveHTTPApi: manet.Listen(%s) failed: %s", apiMaddr, err)
-		}
+		// XXX		if err != nil {
+		//			return nil, fmt.Errorf("serveHTTPApi: manet.Listen(%s) failed: %s", apiMaddr, err)
+		//		}
 
 		listenerAddrs[string(apiMaddr.Bytes())] = true
 		listeners = append(listeners, apiLis)
@@ -800,10 +800,12 @@ func serveHTTPGateway(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, e
 
 		gwLis, err := manet.Listen(gatewayMaddr)
 		if err != nil {
-			return nil, fmt.Errorf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err)
+			// XXX just ignore (for local experiment setting)
+			// return nil, fmt.Errorf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err)
+		} else {
+			listenerAddrs[string(gatewayMaddr.Bytes())] = true
+			listeners = append(listeners, gwLis)
 		}
-		listenerAddrs[string(gatewayMaddr.Bytes())] = true
-		listeners = append(listeners, gwLis)
 	}
 
 	// we might have listened to /tcp/0 - let's see what we are listing on
