@@ -643,9 +643,9 @@ func serveHTTPApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error
 		}
 
 		apiLis, err := manet.Listen(apiMaddr)
-		// XXX		if err != nil {
-		//			return nil, fmt.Errorf("serveHTTPApi: manet.Listen(%s) failed: %s", apiMaddr, err)
-		//		}
+		if err != nil {
+			return nil, fmt.Errorf("serveHTTPApi: manet.Listen(%s) failed: %s", apiMaddr, err)
+		}
 
 		listenerAddrs[string(apiMaddr.Bytes())] = true
 		listeners = append(listeners, apiLis)
