@@ -15,6 +15,9 @@ import (
 
 	multierror "github.com/hashicorp/go-multierror"
 
+	cmds "github.com/ipfs/go-ipfs-cmds"
+	mprome "github.com/ipfs/go-metrics-prometheus"
+	options "github.com/ipfs/interface-go-ipfs-core/options"
 	version "github.com/ipfs/kubo"
 	utilmain "github.com/ipfs/kubo/cmd/ipfs/util"
 	oldcmds "github.com/ipfs/kubo/commands"
@@ -30,15 +33,12 @@ import (
 	fsrepo "github.com/ipfs/kubo/repo/fsrepo"
 	"github.com/ipfs/kubo/repo/fsrepo/migrations"
 	"github.com/ipfs/kubo/repo/fsrepo/migrations/ipfsfetcher"
+	goprocess "github.com/jbenet/goprocess"
 	pnet "github.com/libp2p/go-libp2p/core/pnet"
 	sockets "github.com/libp2p/go-socket-activation"
-
-	cmds "github.com/ipfs/go-ipfs-cmds"
-	mprome "github.com/ipfs/go-metrics-prometheus"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
-	goprocess "github.com/jbenet/goprocess"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
+	bsdht "github.com/piax/go-byzskip/dht"
 	prometheus "github.com/prometheus/client_golang/prometheus"
 	promauto "github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -59,6 +59,7 @@ const (
 	routingOptionDHTClientKwd = "dhtclient"
 	routingOptionDHTKwd       = "dht"
 	routingOptionDHTServerKwd = "dhtserver"
+	routingOptionBSDHTKwd     = "bsdht"
 	routingOptionNoneKwd      = "none"
 	routingOptionCustomKwd    = "custom"
 	routingOptionDefaultKwd   = "default"
@@ -422,6 +423,8 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		ncfg.Routing = libp2p.DHTOption
 	case routingOptionDHTServerKwd:
 		ncfg.Routing = libp2p.DHTServerOption
+	case routingOptionBSDHTKwd:
+		ncfg.Routing = bsdht.BSDHTOption
 	case routingOptionNoneKwd:
 		ncfg.Routing = libp2p.NilRouterOption
 	case routingOptionCustomKwd:
@@ -800,8 +803,8 @@ func serveHTTPGateway(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, e
 
 		gwLis, err := manet.Listen(gatewayMaddr)
 		if err != nil {
-			// XXX just ignore (for local experiment setting)
-			// return nil, fmt.Errorf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err)
+			// the address may be an external address which the process cannot listen to
+			log.Errorf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err)
 		} else {
 			listenerAddrs[string(gatewayMaddr.Bytes())] = true
 			listeners = append(listeners, gwLis)
