@@ -804,7 +804,7 @@ func serveHTTPGateway(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, e
 		gwLis, err := manet.Listen(gatewayMaddr)
 		if err != nil {
 			// the address may be an external address which the process cannot listen to
-			log.Errorf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err)
+			log.Warnf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err)
 		} else {
 			listenerAddrs[string(gatewayMaddr.Bytes())] = true
 			listeners = append(listeners, gwLis)
