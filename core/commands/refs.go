@@ -8,14 +8,14 @@ import (
 	"strings"
 
 	cmdenv "github.com/ipfs/kubo/core/commands/cmdenv"
+	"github.com/ipfs/kubo/core/commands/cmdutils"
 
+	merkledag "github.com/ipfs/boxo/ipld/merkledag"
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	ipld "github.com/ipfs/go-ipld-format"
-	merkledag "github.com/ipfs/go-merkledag"
-	iface "github.com/ipfs/interface-go-ipfs-core"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	iface "github.com/ipfs/kubo/core/coreiface"
 )
 
 var refsEncoderMap = cmds.EncoderMap{
@@ -171,11 +171,15 @@ Displays the hashes of all local objects. NOTE: This treats all local objects as
 func objectsForPaths(ctx context.Context, n iface.CoreAPI, paths []string) ([]cid.Cid, error) {
 	roots := make([]cid.Cid, len(paths))
 	for i, sp := range paths {
-		o, err := n.ResolvePath(ctx, path.New(sp))
+		p, err := cmdutils.PathOrCidPath(sp)
 		if err != nil {
 			return nil, err
 		}
-		roots[i] = o.Cid()
+		o, _, err := n.ResolvePath(ctx, p)
+		if err != nil {
+			return nil, err
+		}
+		roots[i] = o.RootCid()
 	}
 	return roots, nil
 }

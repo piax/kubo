@@ -12,13 +12,13 @@ import (
 	"strings"
 
 	"github.com/ipfs/kubo/core/commands/cmdenv"
+	"github.com/ipfs/kubo/core/commands/cmdutils"
 	"github.com/ipfs/kubo/core/commands/e"
 
 	"github.com/cheggaaa/pb"
+	"github.com/ipfs/boxo/files"
+	"github.com/ipfs/boxo/tar"
 	cmds "github.com/ipfs/go-ipfs-cmds"
-	files "github.com/ipfs/go-ipfs-files"
-	"github.com/ipfs/go-libipfs/tar"
-	"github.com/ipfs/interface-go-ipfs-core/path"
 )
 
 var ErrInvalidCompressionLevel = errors.New("compression level must be between 1 and 9")
@@ -72,7 +72,10 @@ may also specify the level of compression by specifying '-l=<1-9>'.
 			return err
 		}
 
-		p := path.New(req.Arguments[0])
+		p, err := cmdutils.PathOrCidPath(req.Arguments[0])
+		if err != nil {
+			return err
+		}
 
 		file, err := api.Unixfs().Get(ctx, p)
 		if err != nil {

@@ -4,16 +4,25 @@
 - Related Issues:
   - https://github.com/ipfs/kubo/issues/9188
   - https://github.com/ipfs/kubo/issues/9079
+  - https://github.com/ipfs/kubo/pull/9877
 
 ## Summary
 
-Previously we only used DHT for content routing and content providing. After kubo-0.14.0 release we added support for [delegated routing using Reframe protocol](https://github.com/ipfs/kubo/pull/8997).
+Previously we only used the Amino DHT for content routing and content
+providing.
 
-Now we need a better way to add different routers using different protocols like Reframe or DHT, and be able to configure them to cover different use cases.
+Kubo 0.14 introduced experimental support for [delegated routing using Reframe protocol](https://github.com/ipfs/kubo/pull/8997).
+Since then,  Reframe got deprecated and superseded by [Routing V1 HTTP API](https://specs.ipfs.tech/routing/http-routing-v1/).
+
+Kubo 0.23.0 release added support for [self-hosting Routing V1 HTTP API server](https://github.com/ipfs/kubo/blob/master/docs/changelogs/v0.23.md#self-hosting-routingv1-endpoint-for-delegated-routing-needs).
+
+Now we need a better way to add different routers using different protocols
+like [Routing V1](https://specs.ipfs.tech/routing/http-routing-v1/) or Amino
+DHT, and be able to configure them (future routing systems to come) to cover different use cases.
 
 ## Motivation
 
-The actual routing implementation is not enough. Some users needs to have more options when configuring the routing system. The new implementations should be able to:
+The actual routing implementation is not enough. Some users need to have more options when configuring the routing system. The new implementations should be able to:
 
 - [x] Be user-friendly and easy enough to configure, but also versatile
 - [x] Configurable Router execution order
@@ -43,12 +52,12 @@ Params:
 
 - `"Endpoint"`: URL endpoint implementing Reframe protocol.
 
-##### DHT
+##### Amino DHT
 
 Params:
-- `"Mode"`: Mode used by the DHT. Possible values: "server", "client", "auto"
+- `"Mode"`: Mode used by the Amino DHT. Possible values: "server", "client", "auto"
 - `"AcceleratedDHTClient"`: Set to `true` if you want to use the experimentalDHT.
-- `"PublicIPNetwork"`: Set to `true` to create a `WAN` DHT. Set to `false` to create a `LAN` DHT.
+- `"PublicIPNetwork"`: Set to `true` to create a `WAN` Amino DHT. Set to `false` to create a `LAN` DHT.
 
 ##### Parallel
 
@@ -393,8 +402,7 @@ As test fixtures we can add different use cases here and see how the configurati
   }
 }
 ```
-
-Yaml representation for clarity:
+YAML representation for clarity:
 
 ```yaml
 ---

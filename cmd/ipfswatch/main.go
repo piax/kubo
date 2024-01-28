@@ -19,14 +19,16 @@ import (
 	fsrepo "github.com/ipfs/kubo/repo/fsrepo"
 
 	fsnotify "github.com/fsnotify/fsnotify"
-	files "github.com/ipfs/go-ipfs-files"
+	"github.com/ipfs/boxo/files"
 	process "github.com/jbenet/goprocess"
 	homedir "github.com/mitchellh/go-homedir"
 )
 
-var http = flag.Bool("http", false, "expose IPFS HTTP API")
-var repoPath = flag.String("repo", os.Getenv("IPFS_PATH"), "IPFS_PATH to use")
-var watchPath = flag.String("path", ".", "the path to watch")
+var (
+	http      = flag.Bool("http", false, "expose IPFS HTTP API")
+	repoPath  = flag.String("repo", os.Getenv("IPFS_PATH"), "IPFS_PATH to use")
+	watchPath = flag.String("path", ".", "the path to watch")
+)
 
 func main() {
 	flag.Parse()
@@ -52,7 +54,6 @@ func main() {
 }
 
 func run(ipfsPath, watchPath string) error {
-
 	proc := process.WithParent(process.Background())
 	log.Printf("running IPFSWatch on '%s' using repo at '%s'...", watchPath, ipfsPath)
 
@@ -93,8 +94,8 @@ func run(ipfsPath, watchPath string) error {
 
 	if *http {
 		addr := "/ip4/127.0.0.1/tcp/5001"
-		var opts = []corehttp.ServeOption{
-			corehttp.GatewayOption(true, "/ipfs", "/ipns"),
+		opts := []corehttp.ServeOption{
+			corehttp.GatewayOption("/ipfs", "/ipns"),
 			corehttp.WebUIOption,
 			corehttp.CommandsOption(cmdCtx(node, ipfsPath)),
 		}

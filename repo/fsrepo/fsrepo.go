@@ -11,16 +11,17 @@ import (
 	"strings"
 	"sync"
 
-	filestore "github.com/ipfs/go-filestore"
-	keystore "github.com/ipfs/go-ipfs-keystore"
+	filestore "github.com/ipfs/boxo/filestore"
+	keystore "github.com/ipfs/boxo/keystore"
 	repo "github.com/ipfs/kubo/repo"
 	"github.com/ipfs/kubo/repo/common"
 	dir "github.com/ipfs/kubo/thirdparty/dir"
+	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 
+	util "github.com/ipfs/boxo/util"
 	ds "github.com/ipfs/go-datastore"
 	measure "github.com/ipfs/go-ds-measure"
 	lockfile "github.com/ipfs/go-fs-lock"
-	util "github.com/ipfs/go-ipfs-util"
 	logging "github.com/ipfs/go-log"
 	config "github.com/ipfs/kubo/config"
 	serialize "github.com/ipfs/kubo/config/serialize"
@@ -30,13 +31,13 @@ import (
 )
 
 // LockFile is the filename of the repo lock, relative to config dir
-// TODO rename repo lock and hide name
+// TODO rename repo lock and hide name.
 const LockFile = "repo.lock"
 
 var log = logging.Logger("fsrepo")
 
-// RepoVersion is the version number that we are currently expecting to see
-var RepoVersion = 13
+// RepoVersion is the version number that we are currently expecting to see.
+var RepoVersion = 15
 
 var migrationInstructions = `See https://github.com/ipfs/fs-repo-migrations/blob/master/run.md
 Sorry for the inconvenience. In the future, these will run automatically.`
@@ -63,9 +64,11 @@ func (err NoRepoError) Error() string {
 	return fmt.Sprintf("no IPFS repo found in %s.\nplease run: 'ipfs init'", err.Path)
 }
 
-const apiFile = "api"
-const gatewayFile = "gateway"
-const swarmKeyFile = "swarm.key"
+const (
+	apiFile      = "api"
+	gatewayFile  = "gateway"
+	swarmKeyFile = "swarm.key"
+)
 
 const specFn = "datastore_spec"
 
@@ -102,11 +105,12 @@ type FSRepo struct {
 	configFilePath string
 	// lockfile is the file system lock to prevent others from opening
 	// the same fsrepo path concurrently
-	lockfile io.Closer
-	config   *config.Config
-	ds       repo.Datastore
-	keystore keystore.Keystore
-	filemgr  *filestore.FileManager
+	lockfile              io.Closer
+	config                *config.Config
+	userResourceOverrides rcmgr.PartialLimitConfig
+	ds                    repo.Datastore
+	keystore              keystore.Keystore
+	filemgr               *filestore.FileManager
 }
 
 var _ repo.Repo = (*FSRepo)(nil)
@@ -177,6 +181,10 @@ func open(repoPath string, userConfigFilePath string) (repo.Repo, error) {
 	}
 
 	if err := r.openConfig(); err != nil {
+		return nil, err
+	}
+
+	if err := r.openUserResourceOverrides(); err != nil {
 		return nil, err
 	}
 
@@ -271,13 +279,12 @@ func initSpec(path string, conf map[string]interface{}) error {
 	}
 	bytes := dsc.DiskSpec().Bytes()
 
-	return os.WriteFile(fn, bytes, 0600)
+	return os.WriteFile(fn, bytes, 0o600)
 }
 
 // Init initializes a new FSRepo at the given path with the provided config.
 // TODO add support for custom datastores.
 func Init(repoPath string, conf *config.Config) error {
-
 	// packageLock must be held to ensure that the repo is not initialized more
 	// than once.
 	packageLock.Lock()
@@ -437,6 +444,17 @@ func (r *FSRepo) openConfig() error {
 	return nil
 }
 
+// openUserResourceOverrides will remove all overrides if the file is not present.
+// It will error if the decoding fails.
+func (r *FSRepo) openUserResourceOverrides() error {
+	// This filepath is documented in docs/libp2p-resource-management.md and be kept in sync.
+	err := serialize.ReadConfigFile(filepath.Join(r.path, "libp2p-resource-limit-overrides.json"), &r.userResourceOverrides)
+	if errors.Is(err, serialize.ErrNotInitialized) {
+		err = nil
+	}
+	return err
+}
+
 func (r *FSRepo) openKeystore() error {
 	ksp := filepath.Join(r.path, "keystore")
 	ks, err := keystore.NewFSKeystore(ksp)
@@ -554,6 +572,21 @@ func (r *FSRepo) Config() (*config.Config, error) {
 	return r.config, nil
 }
 
+func (r *FSRepo) UserResourceOverrides() (rcmgr.PartialLimitConfig, error) {
+	// It is not necessary to hold the package lock since the repo is in an
+	// opened state. The package lock is _not_ meant to ensure that the repo is
+	// thread-safe. The package lock is only meant to guard against removal and
+	// coordinate the lockfile. However, we provide thread-safety to keep
+	// things simple.
+	packageLock.Lock()
+	defer packageLock.Unlock()
+
+	if r.closed {
+		return rcmgr.PartialLimitConfig{}, errors.New("cannot access config, repo not open")
+	}
+	return r.userResourceOverrides, nil
+}
+
 func (r *FSRepo) FileManager() *filestore.FileManager {
 	return r.filemgr
 }
@@ -565,7 +598,7 @@ func (r *FSRepo) BackupConfig(prefix string) (string, error) {
 	}
 	defer temp.Close()
 
-	orig, err := os.OpenFile(r.configFilePath, os.O_RDONLY, 0600)
+	orig, err := os.OpenFile(r.configFilePath, os.O_RDONLY, 0o600)
 	if err != nil {
 		return "", err
 	}
@@ -594,7 +627,6 @@ func (r *FSRepo) BackupConfig(prefix string) (string, error) {
 // We need to comb SetConfig calls and replace them when possible with a
 // JSON map variant.
 func (r *FSRepo) SetConfig(updated *config.Config) error {
-
 	// packageLock is held to provide thread-safety.
 	packageLock.Lock()
 	defer packageLock.Unlock()
@@ -693,7 +725,7 @@ func (r *FSRepo) Datastore() repo.Datastore {
 	return d
 }
 
-// GetStorageUsage computes the storage space taken by the repo in bytes
+// GetStorageUsage computes the storage space taken by the repo in bytes.
 func (r *FSRepo) GetStorageUsage(ctx context.Context) (uint64, error) {
 	return ds.DiskUsage(ctx, r.Datastore())
 }
@@ -714,8 +746,10 @@ func (r *FSRepo) SwarmKey() ([]byte, error) {
 	return io.ReadAll(f)
 }
 
-var _ io.Closer = &FSRepo{}
-var _ repo.Repo = &FSRepo{}
+var (
+	_ io.Closer = &FSRepo{}
+	_ repo.Repo = &FSRepo{}
+)
 
 // IsInitialized returns true if the repo is initialized at provided |path|.
 func IsInitialized(path string) bool {

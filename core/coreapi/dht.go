@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	blockservice "github.com/ipfs/go-blockservice"
+	blockservice "github.com/ipfs/boxo/blockservice"
+	blockstore "github.com/ipfs/boxo/blockstore"
+	offline "github.com/ipfs/boxo/exchange/offline"
+	dag "github.com/ipfs/boxo/ipld/merkledag"
+	"github.com/ipfs/boxo/path"
 	cid "github.com/ipfs/go-cid"
 	cidutil "github.com/ipfs/go-cidutil"
-	blockstore "github.com/ipfs/go-ipfs-blockstore"
-	offline "github.com/ipfs/go-ipfs-exchange-offline"
-	dag "github.com/ipfs/go-merkledag"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	caopts "github.com/ipfs/interface-go-ipfs-core/options"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	coreiface "github.com/ipfs/kubo/core/coreiface"
+	caopts "github.com/ipfs/kubo/core/coreiface/options"
 	"github.com/ipfs/kubo/tracing"
 	peer "github.com/libp2p/go-libp2p/core/peer"
 	routing "github.com/libp2p/go-libp2p/core/routing"
@@ -53,7 +53,7 @@ func (api *DhtAPI) FindProviders(ctx context.Context, p path.Path, opts ...caopt
 		return nil, err
 	}
 
-	rp, err := api.core().ResolvePath(ctx, p)
+	rp, _, err := api.core().ResolvePath(ctx, p)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (api *DhtAPI) FindProviders(ctx context.Context, p path.Path, opts ...caopt
 		return nil, fmt.Errorf("number of providers must be greater than 0")
 	}
 
-	pchan := api.routing.FindProvidersAsync(ctx, rp.Cid(), numProviders)
+	pchan := api.routing.FindProvidersAsync(ctx, rp.RootCid(), numProviders)
 	return pchan, nil
 }
 
@@ -82,12 +82,12 @@ func (api *DhtAPI) Provide(ctx context.Context, path path.Path, opts ...caopts.D
 		return err
 	}
 
-	rp, err := api.core().ResolvePath(ctx, path)
+	rp, _, err := api.core().ResolvePath(ctx, path)
 	if err != nil {
 		return err
 	}
 
-	c := rp.Cid()
+	c := rp.RootCid()
 
 	has, err := api.blockstore.Has(ctx, c)
 	if err != nil {

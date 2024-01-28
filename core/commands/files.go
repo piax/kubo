@@ -14,18 +14,18 @@ import (
 	"github.com/ipfs/kubo/core"
 	"github.com/ipfs/kubo/core/commands/cmdenv"
 
-	bservice "github.com/ipfs/go-blockservice"
+	bservice "github.com/ipfs/boxo/blockservice"
+	offline "github.com/ipfs/boxo/exchange/offline"
+	dag "github.com/ipfs/boxo/ipld/merkledag"
+	ft "github.com/ipfs/boxo/ipld/unixfs"
+	mfs "github.com/ipfs/boxo/mfs"
+	"github.com/ipfs/boxo/path"
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	cmds "github.com/ipfs/go-ipfs-cmds"
-	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
-	dag "github.com/ipfs/go-merkledag"
-	mfs "github.com/ipfs/go-mfs"
-	ft "github.com/ipfs/go-unixfs"
-	iface "github.com/ipfs/interface-go-ipfs-core"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	iface "github.com/ipfs/kubo/core/coreiface"
 	mh "github.com/multiformats/go-multihash"
 )
 
@@ -88,8 +88,10 @@ const (
 	filesHashOptionName       = "hash"
 )
 
-var cidVersionOption = cmds.IntOption(filesCidVersionOptionName, "cid-ver", "Cid version to use. (experimental)")
-var hashOption = cmds.StringOption(filesHashOptionName, "Hash function to use. Will set Cid version to 1 if used. (experimental)")
+var (
+	cidVersionOption = cmds.IntOption(filesCidVersionOptionName, "cid-ver", "Cid version to use. (experimental)")
+	hashOption       = cmds.StringOption(filesHashOptionName, "Hash function to use. Will set Cid version to 1 if used. (experimental)")
+)
 
 var errFormat = errors.New("format was set by multiple options. Only one format option is allowed")
 
@@ -131,7 +133,6 @@ var filesStatCmd = &cmds.Command{
 		cmds.BoolOption(filesWithLocalOptionName, "Compute the amount of the dag that is local, and if possible the total size"),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-
 		_, err := statGetFormatOptions(req)
 		if err != nil {
 			return cmds.Errorf(cmds.ErrClient, err.Error())
@@ -225,7 +226,6 @@ func moreThanOne(a, b, c bool) bool {
 }
 
 func statGetFormatOptions(req *cmds.Request) (string, error) {
-
 	hash, _ := req.Options[filesHashOptionName].(bool)
 	size, _ := req.Options[filesSizeOptionName].(bool)
 	format, _ := req.Options[filesFormatOptionName].(string)
@@ -307,7 +307,6 @@ func walkBlock(ctx context.Context, dagserv ipld.DAGService, nd ipld.Node) (bool
 		}
 
 		childLocal, childLocalSize, err := walkBlock(ctx, dagserv, child)
-
 		if err != nil {
 			return local, sizeLocal, err
 		}
@@ -424,7 +423,12 @@ being GC'ed.
 func getNodeFromPath(ctx context.Context, node *core.IpfsNode, api iface.CoreAPI, p string) (ipld.Node, error) {
 	switch {
 	case strings.HasPrefix(p, "/ipfs/"):
-		return api.ResolveNode(ctx, path.New(p))
+		pth, err := path.NewPath(p)
+		if err != nil {
+			return nil, err
+		}
+
+		return api.ResolveNode(ctx, pth)
 	default:
 		fsn, err := mfs.Lookup(node.FilesRoot, p)
 		if err != nil {
