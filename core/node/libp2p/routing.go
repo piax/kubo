@@ -13,6 +13,8 @@ import (
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	ddht "github.com/libp2p/go-libp2p-kad-dht/dual"
 	"github.com/libp2p/go-libp2p-kad-dht/fullrt"
+	bsdht "github.com/piax/go-byzskip/dht"
+
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	namesys "github.com/libp2p/go-libp2p-pubsub-router"
 	record "github.com/libp2p/go-libp2p-record"
@@ -59,6 +61,7 @@ type processInitialRoutingOut struct {
 
 	DHT       *ddht.DHT
 	DHTClient routing.Routing `name:"dhtc"`
+	BSDHT     *bsdht.BSDHT
 }
 
 type AddrInfoChan chan peer.AddrInfo
@@ -72,6 +75,16 @@ func BaseRouting(cfg *config.Config) interface{} {
 			lc.Append(fx.Hook{
 				OnStop: func(ctx context.Context) error {
 					return dualDHT.Close()
+				},
+			})
+		}
+
+		var bsDHT *bsdht.BSDHT
+		if b, ok := in.Router.(*bsdht.BSDHT); ok {
+			bsDHT = b
+			lc.Append(fx.Hook{
+				OnStop: func(ctx context.Context) error {
+					return bsDHT.Close()
 				},
 			})
 		}
@@ -138,6 +151,7 @@ func BaseRouting(cfg *config.Config) interface{} {
 				},
 				DHT:           dualDHT,
 				DHTClient:     fullRTClient,
+				BSDHT:         bsDHT,
 				ContentRouter: fullRTClient,
 			}, nil
 		}
@@ -149,6 +163,7 @@ func BaseRouting(cfg *config.Config) interface{} {
 			},
 			DHT:           dualDHT,
 			DHTClient:     dualDHT,
+			BSDHT:         bsDHT,
 			ContentRouter: in.Router,
 		}, nil
 	}
