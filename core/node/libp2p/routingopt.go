@@ -14,6 +14,7 @@ import (
 	host "github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	routing "github.com/libp2p/go-libp2p/core/routing"
+	bsdht "github.com/piax/go-byzskip/dht"
 )
 
 type RoutingOptionArgs struct {
@@ -116,6 +117,10 @@ func constructDHTRouting(mode dht.ModeOpt) RoutingOption {
 			dual.LanDHTOption(lanOptions...),
 		)
 	}
+}
+
+func BSDHTOption(args RoutingOptionArgs) (routing.Routing, error) {
+	return bsdht.New(args.Host, bsdht.Datastore(args.Datastore), bsdht.RecordValidator(args.Validator), bsdht.BootstrapAddrs(args.BootstrapPeers))
 }
 
 // ConstructDelegatedRouting is used when Routing.Type = "custom"
