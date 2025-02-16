@@ -64,6 +64,7 @@ const (
 	routingOptionSupernodeKwd  = "supernode"
 	routingOptionDHTClientKwd  = "dhtclient"
 	routingOptionDHTKwd        = "dht"
+	routingOptionBSDHTKwd      = "bsdht"
 	routingOptionDHTServerKwd  = "dhtserver"
 	routingOptionNoneKwd       = "none"
 	routingOptionCustomKwd     = "custom"
@@ -440,6 +441,8 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		ncfg.Routing = libp2p.DHTOption
 	case routingOptionDHTServerKwd:
 		ncfg.Routing = libp2p.DHTServerOption
+	case routingOptionBSDHTKwd:
+		ncfg.Routing = libp2p.BSDHTOption
 	case routingOptionNoneKwd:
 		ncfg.Routing = libp2p.NilRouterOption
 	case routingOptionCustomKwd:
@@ -915,6 +918,7 @@ func serveHTTPGateway(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, e
 		}
 		listenerAddrs[string(gatewayMaddr.Bytes())] = true
 		listeners = append(listeners, gwLis)
+
 	}
 
 	// we might have listened to /tcp/0 - let's see what we are listing on
