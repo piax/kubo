@@ -58,6 +58,7 @@ import (
 	"github.com/ipfs/kubo/p2p"
 	"github.com/ipfs/kubo/repo"
 	irouting "github.com/ipfs/kubo/routing"
+	bsdht "github.com/piax/go-byzskip/dht"
 )
 
 var log = logging.Logger("core")
@@ -115,6 +116,7 @@ type IpfsNode struct {
 
 	DHT       *ddht.DHT       `optional:"true"`
 	DHTClient routing.Routing `name:"dhtc" optional:"true"`
+	BSDHT     *bsdht.BSDHT    `optional:"true"`
 
 	P2P *p2p.P2P `optional:"true"`
 
