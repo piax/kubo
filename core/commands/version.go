@@ -16,6 +16,7 @@ import (
 	"github.com/libp2p/go-libp2p-kad-dht/fullrt"
 	peer "github.com/libp2p/go-libp2p/core/peer"
 	pstore "github.com/libp2p/go-libp2p/core/peerstore"
+	"github.com/piax/go-byzskip/byzskip"
 )
 
 const (
@@ -270,6 +271,14 @@ func DetectNewKuboVersion(nd *core.IpfsNode, minPercent int64) (VersionCheckOutp
 	} else if nd.DHT != nil && nd.DHT.LAN != nil {
 		for _, pi := range nd.DHT.LAN.RoutingTable().GetPeerInfos() {
 			processPeerstoreEntry(pi.Id)
+		}
+	} else if nd.BSDHT != nil {
+		for _, pi := range nd.BSDHT.Node.RoutingTable.AllNeighbors(false, false) {
+			p, ok := pi.(*byzskip.BSNode)
+			if !ok {
+				return VersionCheckOutput{}, errors.New("could not perform version check due to missing or incompatible ByzSkip configuration")
+			}
+			processPeerstoreEntry(p.Id())
 		}
 	} else {
 		return VersionCheckOutput{}, errors.New("could not perform version check due to missing or incompatible DHT configuration")
