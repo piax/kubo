@@ -2,7 +2,7 @@ module github.com/ipfs/kubo
 
 replace github.com/piax/go-byzskip => ../go-byzskip
 
-go 1.23
+go 1.24
 
 require (
 	bazil.org/fuse v0.0.0-20200117225306-7b5117fecadc
@@ -24,11 +24,11 @@ require (
 	github.com/hashicorp/go-version v1.7.0
 	github.com/ipfs-shipyard/nopfs v0.0.14
 	github.com/ipfs-shipyard/nopfs/ipfs v0.25.0
-	github.com/ipfs/boxo v0.27.4
+	github.com/ipfs/boxo v0.28.0
 	github.com/ipfs/go-block-format v0.2.0
 	github.com/ipfs/go-cid v0.5.0
 	github.com/ipfs/go-cidutil v0.1.0
-	github.com/ipfs/go-datastore v0.6.0
+	github.com/ipfs/go-datastore v0.7.0
 	github.com/ipfs/go-detect-race v0.0.1
 	github.com/ipfs/go-ds-badger v0.3.1
 	github.com/ipfs/go-ds-flatfs v0.5.1
@@ -45,7 +45,7 @@ require (
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/ipfs/go-metrics-interface v0.0.1
 	github.com/ipfs/go-metrics-prometheus v0.0.3
-	github.com/ipfs/go-test v0.0.4
+	github.com/ipfs/go-test v0.2.1
 	github.com/ipfs/go-unixfsnode v1.9.2
 	github.com/ipld/go-car v0.6.2
 	github.com/ipld/go-car/v2 v2.14.2
@@ -56,10 +56,10 @@ require (
 	github.com/jbenet/goprocess v0.1.4
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/libp2p/go-doh-resolver v0.5.0
-	github.com/libp2p/go-libp2p v0.39.1
+	github.com/libp2p/go-libp2p v0.40.0
 	github.com/libp2p/go-libp2p-http v0.5.0
-	github.com/libp2p/go-libp2p-kad-dht v0.29.0
-	github.com/libp2p/go-libp2p-kbucket v0.6.4
+	github.com/libp2p/go-libp2p-kad-dht v0.29.1
+	github.com/libp2p/go-libp2p-kbucket v0.6.5
 	github.com/libp2p/go-libp2p-pubsub v0.12.0
 	github.com/libp2p/go-libp2p-pubsub-router v0.6.0
 	github.com/libp2p/go-libp2p-record v0.3.1
@@ -74,7 +74,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
 	github.com/piax/go-byzskip v0.0.0-00010101000000-000000000000
-	github.com/prometheus/client_golang v1.20.5
+	github.com/prometheus/client_golang v1.21.0
 	github.com/stretchr/testify v1.10.0
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d
 	github.com/tidwall/gjson v1.16.0
@@ -91,12 +91,12 @@ require (
 	go.uber.org/fx v1.23.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/crypto v0.32.0
-	golang.org/x/exp v0.0.0-20250128182459-e0ece0dbea4c
+	golang.org/x/crypto v0.33.0
+	golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa
 	golang.org/x/mod v0.23.0
 	golang.org/x/sync v0.11.0
 	golang.org/x/sys v0.30.0
-	google.golang.org/protobuf v1.36.4
+	google.golang.org/protobuf v1.36.5
 )
 
 require (
@@ -119,7 +119,7 @@ require (
 	github.com/cskr/pubsub v1.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/dgraph-io/badger v1.6.2 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -145,7 +145,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
-	github.com/google/pprof v0.0.0-20250202011525-fc3143867406 // indirect
+	github.com/google/pprof v0.0.0-20250208200701-d0013a598941 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 // indirect
@@ -183,7 +183,7 @@ require (
 	github.com/libp2p/go-nat v0.2.0 // indirect
 	github.com/libp2p/go-netroute v0.2.2 // indirect
 	github.com/libp2p/go-reuseport v0.4.0 // indirect
-	github.com/libp2p/go-yamux/v4 v4.0.2 // indirect
+	github.com/libp2p/go-yamux/v5 v5.0.0 // indirect
 	github.com/libp2p/zeroconf/v2 v2.2.0 // indirect
 	github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -210,11 +210,9 @@ require (
 	github.com/pion/datachannel v1.5.10 // indirect
 	github.com/pion/dtls/v2 v2.2.12 // indirect
 	github.com/pion/dtls/v3 v3.0.4 // indirect
-	github.com/pion/ice/v2 v2.3.37 // indirect
 	github.com/pion/ice/v4 v4.0.6 // indirect
 	github.com/pion/interceptor v0.1.37 // indirect
 	github.com/pion/logging v0.2.3 // indirect
-	github.com/pion/mdns v0.0.12 // indirect
 	github.com/pion/mdns/v2 v2.0.7 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pion/rtcp v1.2.15 // indirect
@@ -226,9 +224,8 @@ require (
 	github.com/pion/stun/v3 v3.0.0 // indirect
 	github.com/pion/transport/v2 v2.2.10 // indirect
 	github.com/pion/transport/v3 v3.0.7 // indirect
-	github.com/pion/turn/v2 v2.1.6 // indirect
 	github.com/pion/turn/v4 v4.0.0 // indirect
-	github.com/pion/webrtc/v4 v4.0.8 // indirect
+	github.com/pion/webrtc/v4 v4.0.9 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/polydawn/refmt v0.89.0 // indirect
@@ -274,11 +271,11 @@ require (
 	go.uber.org/mock v0.5.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/net v0.34.0 // indirect
+	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/oauth2 v0.24.0 // indirect
-	golang.org/x/term v0.28.0 // indirect
+	golang.org/x/term v0.29.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
-	golang.org/x/tools v0.29.0 // indirect
+	golang.org/x/tools v0.30.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	gonum.org/v1/gonum v0.15.1 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241007155032-5fefd90f89a9 // indirect
