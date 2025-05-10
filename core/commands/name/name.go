@@ -70,6 +70,7 @@ Resolve the value of a dnslink:
 	},
 
 	Subcommands: map[string]*cmds.Command{
+		"hrns":    HrnsCmd,
 		"publish": PublishCmd,
 		"resolve": IpnsCmd,
 		"pubsub":  IpnsPubsubCmd,

@@ -24,6 +24,7 @@ func RecordValidator(ps peerstore.Peerstore) record.Validator {
 	return record.NamespacedValidator{
 		"pk":   record.PublicKeyValidator{},
 		"ipns": ipns.Validator{KeyBook: ps},
+		//		"hrns": bsdht.NamedValueValidator{},
 	}
 }
 
