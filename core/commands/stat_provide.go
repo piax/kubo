@@ -56,9 +56,8 @@ This interface is not stable and may change from release to release.
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, s reprovideStats) error {
 			wtr := tabwriter.NewWriter(w, 1, 2, 1, ' ', 0)
 			defer wtr.Flush()
-
-			fmt.Fprintf(wtr, "TotalProvides:\t%s\n", humanNumber(s.TotalProvides))
-			fmt.Fprintf(wtr, "AvgProvideDuration:\t%s\n", humanDuration(s.AvgProvideDuration))
+			fmt.Fprintf(wtr, "TotalProvides:\t%s\n", humanNumber(s.TotalReprovides))
+			fmt.Fprintf(wtr, "AvgProvideDuration:\t%s\n", humanDuration(s.AvgReprovideDuration))
 			fmt.Fprintf(wtr, "LastReprovideDuration:\t%s\n", humanDuration(s.LastReprovideDuration))
 			if !s.LastRun.IsZero() {
 				fmt.Fprintf(wtr, "LastRun:\t%s\n", humanTime(s.LastRun))

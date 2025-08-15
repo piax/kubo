@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/cockroachdb/pebble"
+	"github.com/cockroachdb/pebble/v2"
 	pebbleds "github.com/ipfs/go-ds-pebble"
 	"github.com/ipfs/kubo/misc/fsutil"
 	"github.com/ipfs/kubo/plugin"

@@ -15,7 +15,6 @@ import (
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	"github.com/ipfs/kubo/client/rpc"
 	"github.com/ipfs/kubo/core/commands/cmdenv"
-	"github.com/ipfs/kubo/core/commands/cmdutils"
 	"github.com/ipfs/kubo/repo/fsrepo"
 	"github.com/libp2p/go-libp2p/core/peer"
 	madns "github.com/multiformats/go-multiaddr-dns"
@@ -102,9 +101,19 @@ func executeBsnsCommand(ctx context.Context, api *rpc.HttpApi, command string, a
 	return entries, nil
 }
 
+// getRepoPath returns the repository path from the command options or the best known path
 func getRepoPath(req *cmds.Request) (string, error) {
-	return cmdutils.GetRepoPath(req)
+	if req != nil {
+		if repoOpt, found := req.Options["repo-dir"].(string); found && repoOpt != "" {
+			return repoOpt, nil
+		}
+	}
+	return fsrepo.BestKnownPath()
 }
+
+//func getRepoPath(req *cmds.Request) (string, error) {
+//	return cmdutils.GetRepoPath(req)
+//}
 
 func runCommand(api *rpc.HttpApi, command string, args ...string) ([]string, error) {
 	ctx := context.Background()

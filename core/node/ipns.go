@@ -5,16 +5,16 @@ import (
 	"time"
 
 	"github.com/ipfs/boxo/ipns"
+	"github.com/ipfs/boxo/namesys"
+	"github.com/ipfs/boxo/namesys/republisher"
 	util "github.com/ipfs/boxo/util"
+	"github.com/ipfs/kubo/repo"
+	irouting "github.com/ipfs/kubo/routing"
 	record "github.com/libp2p/go-libp2p-record"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	madns "github.com/multiformats/go-multiaddr-dns"
-
-	"github.com/ipfs/boxo/namesys"
-	"github.com/ipfs/boxo/namesys/republisher"
-	"github.com/ipfs/kubo/repo"
-	irouting "github.com/ipfs/kubo/routing"
+	bsdht "github.com/piax/go-byzskip/dht"
 )
 
 const DefaultIpnsCacheSize = 128
@@ -24,7 +24,7 @@ func RecordValidator(ps peerstore.Peerstore) record.Validator {
 	return record.NamespacedValidator{
 		"pk":   record.PublicKeyValidator{},
 		"ipns": ipns.Validator{KeyBook: ps},
-		//		"hrns": bsdht.NamedValueValidator{},
+		"hrns": bsdht.NamedValueValidator{},
 	}
 }
 
