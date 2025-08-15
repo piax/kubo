@@ -32,9 +32,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
       - name: Check out Kubo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install missing tools
         run: sudo apt update && sudo apt install -y zsh
       - name: 👉️ If this step failed, go to «Summary» (top left) → inspect the «Failures/Errors» table
@@ -45,7 +45,7 @@ jobs:
           make -j "$PARALLEL" test/unit/gotest.junit.xml &&
             [[ ! $(jq -s -c 'map(select(.Action == "fail")) | .[]' test/unit/gotest.json) ]]
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
+        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
         if: failure() || success()
         with:
           name: unittests

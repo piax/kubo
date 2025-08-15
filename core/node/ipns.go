@@ -14,7 +14,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	madns "github.com/multiformats/go-multiaddr-dns"
-	bsdht "github.com/piax/go-byzskip/dht"
 )
 
 const DefaultIpnsCacheSize = 128
@@ -24,7 +23,7 @@ func RecordValidator(ps peerstore.Peerstore) record.Validator {
 	return record.NamespacedValidator{
 		"pk":   record.PublicKeyValidator{},
 		"ipns": ipns.Validator{KeyBook: ps},
-		"hrns": bsdht.NamedValueValidator{},
+		//"hrns": bsdht.NamedValueValidator{},
 	}
 }
 

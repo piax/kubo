@@ -35,7 +35,6 @@ import (
 	fsrepo "github.com/ipfs/kubo/repo/fsrepo"
 	"github.com/ipfs/kubo/repo/fsrepo/migrations"
 	"github.com/ipfs/kubo/repo/fsrepo/migrations/ipfsfetcher"
-	goprocess "github.com/jbenet/goprocess"
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	pnet "github.com/libp2p/go-libp2p/core/pnet"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -45,7 +44,6 @@ import (
 	manet "github.com/multiformats/go-multiaddr/net"
 	prometheus "github.com/prometheus/client_golang/prometheus"
 	promauto "github.com/prometheus/client_golang/prometheus/promauto"
-	"go.uber.org/multierr"
 )
 
 const (
@@ -56,6 +54,7 @@ const (
 	initProfileOptionKwd       = "init-profile"
 	ipfsMountKwd               = "mount-ipfs"
 	ipnsMountKwd               = "mount-ipns"
+	mfsMountKwd                = "mount-mfs"
 	migrateKwd                 = "migrate"
 	mountKwd                   = "mount"
 	offlineKwd                 = "offline" // global option
@@ -174,6 +173,7 @@ Headers.
 		cmds.BoolOption(mountKwd, "Mounts IPFS to the filesystem using FUSE (experimental)"),
 		cmds.StringOption(ipfsMountKwd, "Path to the mountpoint for IPFS (if using --mount). Defaults to config setting."),
 		cmds.StringOption(ipnsMountKwd, "Path to the mountpoint for IPNS (if using --mount). Defaults to config setting."),
+		cmds.StringOption(mfsMountKwd, "Path to the mountpoint for MFS (if using --mount). Defaults to config setting."),
 		cmds.BoolOption(unrestrictedAPIAccessKwd, "Allow RPC API access to unlisted hashes"),
 		cmds.BoolOption(unencryptTransportKwd, "Disable transport encryption (for debugging protocols)"),
 		cmds.BoolOption(enableGCKwd, "Enable automatic periodic repo garbage collection"),
@@ -461,6 +461,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 			cfg.Identity.PeerID,
 			cfg.Addresses,
 			cfg.Identity.PrivKey,
+			cfg.HTTPRetrieval.Enabled.WithDefault(config.DefaultHTTPRetrievalEnabled),
 		)
 	default:
 		return fmt.Errorf("unrecognized routing option: %s", routingOption)
@@ -487,6 +488,14 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	if (pnet.ForcePrivateNetwork || node.PNetFingerprint != nil) && (routingOption == routingOptionAutoKwd || routingOption == routingOptionAutoClientKwd) {
 		// This should never happen, but better safe than sorry
 		log.Fatal("Private network does not work with Routing.Type=auto. Update your config to Routing.Type=dht (or none, and do manual peering)")
+	}
+	if cfg.Provider.Strategy.WithDefault("") != "" && cfg.Reprovider.Strategy.IsDefault() {
+		log.Fatal("Invalid config. Remove unused Provider.Strategy and set Reprovider.Strategy instead. Documentation: https://github.com/ipfs/kubo/blob/master/docs/config.md#reproviderstrategy")
+	}
+	if cfg.Experimental.StrategicProviding {
+		log.Error("Experimental.StrategicProviding was removed. Remove it from your config and set Provider.Enabled=false to remove this message. Documentation: https://github.com/ipfs/kubo/blob/master/docs/experimental-features.md#strategic-providing")
+		cfg.Experimental.StrategicProviding = false
+		cfg.Provider.Enabled = config.False
 	}
 
 	printLibp2pPorts(node)
@@ -529,10 +538,19 @@ take effect.
 	if err != nil {
 		return err
 	}
+
+	pluginErrc := make(chan error, 1)
 	select {
-	case <-node.Process.Closing():
+	case <-node.Context().Done():
+		close(pluginErrc)
 	default:
-		node.Process.AddChild(goprocess.WithTeardown(cctx.Plugins.Close))
+		context.AfterFunc(node.Context(), func() {
+			err := cctx.Plugins.Close()
+			if err != nil {
+				pluginErrc <- fmt.Errorf("closing plugins: %w", err)
+			}
+			close(pluginErrc)
+		})
 	}
 
 	// construct api endpoint - every time
@@ -550,6 +568,11 @@ take effect.
 		if err := mountFuse(req, cctx); err != nil {
 			return err
 		}
+		defer func() {
+			if _err != nil {
+				nodeMount.Unmount(node)
+			}
+		}()
 	}
 
 	// repo blockstore GC - if --enable-gc flag is present
@@ -622,19 +645,32 @@ take effect.
 	}()
 
 	if !offline {
-		// Warn users who were victims of 'lowprofile' footgun (https://github.com/ipfs/kubo/pull/10524)
-		if cfg.Experimental.StrategicProviding {
+		// Warn users when provide systems are disabled
+		if !cfg.Provider.Enabled.WithDefault(config.DefaultProviderEnabled) {
 			fmt.Print(`
-⚠️ Reprovide system is disabled due to 'Experimental.StrategicProviding=true'
+
+⚠️ Provide and Reprovide systems are disabled due to 'Provide.Enabled=false'
 ⚠️ Local CIDs will not be announced to Amino DHT, making them impossible to retrieve without manual peering
-⚠️ If this is not intentional, call 'ipfs config profile apply announce-on'
+⚠️ If this is not intentional, call 'ipfs config profile apply announce-on' or set Provide.Enabled=true'
 
 `)
 		} else if cfg.Reprovider.Interval.WithDefault(config.DefaultReproviderInterval) == 0 {
 			fmt.Print(`
-⚠️ Reprovider system is disabled due to 'Reprovider.Interval=0'
+
+⚠️ Provide and Reprovide systems are disabled due to 'Reprovider.Interval=0'
 ⚠️ Local CIDs will not be announced to Amino DHT, making them impossible to retrieve without manual peering
 ⚠️ If this is not intentional, call 'ipfs config profile apply announce-on', or set 'Reprovider.Interval=22h'
+
+`)
+		}
+
+		// Inform user about Routing.AcceleratedDHTClient when enabled
+		if cfg.Routing.AcceleratedDHTClient.WithDefault(config.DefaultAcceleratedDHTClient) {
+			fmt.Print(`
+
+ℹ️ Routing.AcceleratedDHTClient is enabled for faster content discovery
+ℹ️ and DHT provides. Routing table is initializing. IPFS is ready to use,
+ℹ️ but performance will improve over time as more peers are discovered
 
 `)
 		}
@@ -682,16 +718,26 @@ take effect.
 		log.Fatal("Support for IPFS_REUSEPORT was removed. Use LIBP2P_TCP_REUSEPORT instead.")
 	}
 
+	unmountErrc := make(chan error)
+	context.AfterFunc(node.Context(), func() {
+		<-node.Context().Done()
+		nodeMount.Unmount(node)
+		close(unmountErrc)
+	})
+
 	// collect long-running errors and block for shutdown
 	// TODO(cryptix): our fuse currently doesn't follow this pattern for graceful shutdown
-	var errs error
-	for err := range merge(apiErrc, gwErrc, gcErrc, p2pGwErrc) {
+	var errs []error
+	for err := range merge(apiErrc, gwErrc, gcErrc, p2pGwErrc, pluginErrc, unmountErrc) {
 		if err != nil {
-			errs = multierr.Append(errs, err)
+			errs = append(errs, err)
 		}
 	}
+	if len(errs) != 0 {
+		return errors.Join(errs...)
+	}
 
-	return errs
+	return nil
 }
 
 // serveHTTPApi collects options, creates listener, prints status message and starts serving requests.
@@ -1033,14 +1079,13 @@ func serveTrustlessGatewayOverLibp2p(cctx *oldcmds.Context) (<-chan error, error
 
 	errc := make(chan error, 1)
 	go func() {
-		defer close(errc)
 		errc <- h.Serve()
+		close(errc)
 	}()
 
-	go func() {
-		<-node.Process.Closing()
+	context.AfterFunc(node.Context(), func() {
 		h.Close()
-	}()
+	})
 
 	return errc, nil
 }
@@ -1056,10 +1101,24 @@ func mountFuse(req *cmds.Request, cctx *oldcmds.Context) error {
 	if !found {
 		fsdir = cfg.Mounts.IPFS
 	}
+	if err := checkFusePath("Mounts.IPFS", fsdir); err != nil {
+		return err
+	}
 
 	nsdir, found := req.Options[ipnsMountKwd].(string)
 	if !found {
 		nsdir = cfg.Mounts.IPNS
+	}
+	if err := checkFusePath("Mounts.IPNS", nsdir); err != nil {
+		return err
+	}
+
+	mfsdir, found := req.Options[mfsMountKwd].(string)
+	if !found {
+		mfsdir = cfg.Mounts.MFS
+	}
+	if err := checkFusePath("Mounts.MFS", mfsdir); err != nil {
+		return err
 	}
 
 	node, err := cctx.ConstructNode()
@@ -1067,12 +1126,33 @@ func mountFuse(req *cmds.Request, cctx *oldcmds.Context) error {
 		return fmt.Errorf("mountFuse: ConstructNode() failed: %s", err)
 	}
 
-	err = nodeMount.Mount(node, fsdir, nsdir)
+	err = nodeMount.Mount(node, fsdir, nsdir, mfsdir)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("IPFS mounted at: %s\n", fsdir)
 	fmt.Printf("IPNS mounted at: %s\n", nsdir)
+	fmt.Printf("MFS mounted at: %s\n", mfsdir)
+	return nil
+}
+
+func checkFusePath(name, path string) error {
+	if path == "" {
+		return fmt.Errorf("%s path cannot be empty", name)
+	}
+
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("%s path (%q) does not exist: %w", name, path, err)
+		}
+		return fmt.Errorf("error while inspecting %s path (%q): %w", name, path, err)
+	}
+
+	if !fileInfo.IsDir() {
+		return fmt.Errorf("%s path (%q) is not a directory", name, path)
+	}
+
 	return nil
 }
 
@@ -1090,14 +1170,14 @@ func maybeRunGC(req *cmds.Request, node *core.IpfsNode) (<-chan error, error) {
 	return errc, nil
 }
 
-// merge does fan-in of multiple read-only error channels
-// taken from http://blog.golang.org/pipelines
+// merge does fan-in of multiple read-only error channels.
 func merge(cs ...<-chan error) <-chan error {
 	var wg sync.WaitGroup
 	out := make(chan error)
 
-	// Start an output goroutine for each input channel in cs.  output
-	// copies values from c to out until c is closed, then calls wg.Done.
+	// Start a goroutine for each input channel in cs, that copies values from
+	// the input channel to the output channel until the input channel is
+	// closed.
 	output := func(c <-chan error) {
 		for n := range c {
 			out <- n
@@ -1111,8 +1191,8 @@ func merge(cs ...<-chan error) <-chan error {
 		}
 	}
 
-	// Start a goroutine to close out once all the output goroutines are
-	// done.  This must start after the wg.Add call.
+	// Start a goroutine to close out once all the output goroutines, and other
+	// things to wait on, are done.
 	go func() {
 		wg.Wait()
 		close(out)
@@ -1182,8 +1262,6 @@ Visit https://github.com/ipfs/kubo/releases or https://dist.ipfs.tech/#kubo and 
 			}
 			select {
 			case <-ctx.Done():
-				return
-			case <-nd.Process.Closing():
 				return
 			case <-ticker.C:
 				continue

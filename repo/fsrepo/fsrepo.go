@@ -10,18 +10,18 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	filestore "github.com/ipfs/boxo/filestore"
 	keystore "github.com/ipfs/boxo/keystore"
 	repo "github.com/ipfs/kubo/repo"
 	"github.com/ipfs/kubo/repo/common"
-	dir "github.com/ipfs/kubo/thirdparty/dir"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 
 	ds "github.com/ipfs/go-datastore"
 	measure "github.com/ipfs/go-ds-measure"
 	lockfile "github.com/ipfs/go-fs-lock"
-	logging "github.com/ipfs/go-log"
+	logging "github.com/ipfs/go-log/v2"
 	config "github.com/ipfs/kubo/config"
 	serialize "github.com/ipfs/kubo/config/serialize"
 	"github.com/ipfs/kubo/misc/fsutil"
@@ -146,7 +146,23 @@ func open(repoPath string, userConfigFilePath string) (repo.Repo, error) {
 		return nil, err
 	}
 
-	r.lockfile, err = lockfile.Lock(r.path, LockFile)
+	text := os.Getenv("IPFS_WAIT_REPO_LOCK")
+	if text != "" {
+		var lockWaitTime time.Duration
+		lockWaitTime, err = time.ParseDuration(text)
+		if err != nil {
+			log.Errorw("Cannot parse value of IPFS_WAIT_REPO_LOCK as duration, not waiting for repo lock", "err", err, "value", text)
+			r.lockfile, err = lockfile.Lock(r.path, LockFile)
+		} else if lockWaitTime <= 0 {
+			r.lockfile, err = lockfile.WaitLock(context.Background(), r.path, LockFile)
+		} else {
+			ctx, cancel := context.WithTimeout(context.Background(), lockWaitTime)
+			r.lockfile, err = lockfile.WaitLock(ctx, r.path, LockFile)
+			cancel()
+		}
+	} else {
+		r.lockfile, err = lockfile.Lock(r.path, LockFile)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +191,7 @@ func open(repoPath string, userConfigFilePath string) (repo.Repo, error) {
 	}
 
 	// check repo path, then check all constituent parts.
-	if err := dir.Writable(r.path); err != nil {
+	if err := fsutil.DirWritable(r.path); err != nil {
 		return nil, err
 	}
 
