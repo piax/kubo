@@ -19,7 +19,10 @@ func DNSResolver(cfg *config.Config) (*madns.Resolver, error) {
 		dohOpts = append(dohOpts, doh.WithMaxCacheTTL(cfg.DNS.MaxCacheTTL.WithDefault(time.Duration(math.MaxUint32)*time.Second)))
 	}
 
-	return gateway.NewDNSResolver(cfg.DNS.Resolvers, dohOpts...)
+	// Replace "auto" DNS resolver placeholders with autoconf values
+	resolvers := cfg.DNSResolversWithAutoConf()
+
+	return gateway.NewDNSResolver(resolvers, dohOpts...)
 }
 
 // switchingBasicResolver routes BasicResolver calls to BSDHT when available, otherwise to fallback
