@@ -196,7 +196,7 @@ This accepts durations such as "300s", "1.5h" or "2h45m". Valid time units are
 		}
 
 		if nd.BSDHT == nil {
-			return cmds.Errorf(cmds.ErrClient, "routing service is not a RQDHT")
+			return cmds.Errorf(cmds.ErrClient, "routing service is not a BSDHT")
 		}
 
 		madns.DefaultResolver = &nd.BSDHT.Resolver
@@ -282,7 +282,7 @@ var QueryCmd = &cmds.Command{
 		}
 
 		if nd.BSDHT == nil {
-			return errors.New("routing service is not a NSDHT")
+			return errors.New("routing service is not a BSDHT")
 		}
 
 		name := req.Arguments[0]
@@ -512,7 +512,7 @@ var PeersCmd = &cmds.Command{
 		}
 
 		if nd.BSDHT == nil {
-			return errors.New("routing service is not a RQDHT")
+			return errors.New("routing service is not a BSDHT")
 		}
 
 		name := req.Arguments[0]

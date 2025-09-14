@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ipfs/boxo/ipns"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/kubo/config"
 	irouting "github.com/ipfs/kubo/routing"
@@ -14,6 +15,7 @@ import (
 	routinghelpers "github.com/libp2p/go-libp2p-routing-helpers"
 	host "github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/peerstore"
 	routing "github.com/libp2p/go-libp2p/core/routing"
 	bsdht "github.com/piax/go-byzskip/dht"
 )
@@ -27,6 +29,7 @@ type RoutingOptionArgs struct {
 	OptimisticProvide             bool
 	OptimisticProvideJobsPoolSize int
 	LoopbackAddressesOnLanDHT     bool
+	RepoPath                      string
 }
 
 type RoutingOption func(args RoutingOptionArgs) (routing.Routing, error)
@@ -144,11 +147,24 @@ func constructDHTRouting(mode dht.ModeOpt) RoutingOption {
 }
 
 func BSDHTOption(args RoutingOptionArgs) (routing.Routing, error) {
-	return bsdht.New(args.Host, bsdht.Datastore(args.Datastore), bsdht.RecordValidator(args.Validator), bsdht.BootstrapAddrs(args.BootstrapPeers))
+	// Create a BSDHT-specific RecordValidator that includes IPNS and HRNS validation
+	bsdhtValidator := createBSDHTRecordValidator(args.Host.Peerstore())
+	return bsdht.New(args.Host, bsdht.Datastore(args.Datastore), bsdht.RecordValidator(bsdhtValidator), bsdht.BootstrapAddrs(args.BootstrapPeers))
+}
+
+// createBSDHTRecordValidator creates a RecordValidator specifically for BSDHT
+// that includes IPNS and HRNS validation
+func createBSDHTRecordValidator(ps peerstore.Peerstore) record.Validator {
+	// Create a new NamespacedValidator with IPNS and HRNS support
+	return record.NamespacedValidator{
+		"pk":   record.PublicKeyValidator{},
+		"ipns": ipns.Validator{KeyBook: ps},
+		"hrns": bsdht.NamedValueValidator{},
+	}
 }
 
 // ConstructDelegatedRouting is used when Routing.Type = "custom"
-func ConstructDelegatedRouting(routers config.Routers, methods config.Methods, peerID string, addrs config.Addresses, privKey string, httpRetrieval bool) RoutingOption {
+func ConstructDelegatedRouting(routers config.Routers, methods config.Methods, peerID string, addrs config.Addresses, privKey string, httpRetrieval bool, hrnsEnabled bool) RoutingOption {
 	return func(args RoutingOptionArgs) (routing.Routing, error) {
 		return irouting.Parse(routers, methods,
 			&irouting.ExtraDHTParams{
@@ -157,6 +173,8 @@ func ConstructDelegatedRouting(routers config.Routers, methods config.Methods, p
 				Validator:      args.Validator,
 				Datastore:      args.Datastore,
 				Context:        args.Ctx,
+				RepoPath:       args.RepoPath,
+				HRNSEnabled:    hrnsEnabled,
 			},
 			&irouting.ExtraHTTPParams{
 				PeerID:        peerID,

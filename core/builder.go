@@ -9,6 +9,7 @@ import (
 
 	"github.com/ipfs/boxo/bootstrap"
 	"github.com/ipfs/kubo/core/node"
+	"github.com/ipfs/kubo/core/node/libp2p"
 
 	"github.com/ipfs/go-metrics-interface"
 	"go.uber.org/dig"
@@ -131,7 +132,13 @@ func NewNode(ctx context.Context, cfg *BuildCfg) (*IpfsNode, error) {
 		return n, nil
 	}
 
-	return n, n.Bootstrap(bootstrap.DefaultBootstrapConfig)
+	// Check if BSDHT is detected and adjust bootstrap configuration
+	bootstrapConfig := bootstrap.DefaultBootstrapConfig
+	if libp2p.IsBSDHTDetected() {
+		bootstrapConfig.MinPeerThreshold = 1
+	}
+
+	return n, n.Bootstrap(bootstrapConfig)
 }
 
 // Log the entire `app.Err()` but return only the innermost one to the user

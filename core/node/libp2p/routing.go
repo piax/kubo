@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -66,6 +67,24 @@ type processInitialRoutingOut struct {
 
 type AddrInfoChan chan peer.AddrInfo
 
+// Global variable to store BSDHT instance
+var GlobalBSDHT *bsdht.BSDHT
+var GlobalBSDHTMutex sync.Mutex
+
+// GetGlobalBSDHT returns the global BSDHT instance if available
+func GetGlobalBSDHT() interface{} {
+	GlobalBSDHTMutex.Lock()
+	defer GlobalBSDHTMutex.Unlock()
+	return GlobalBSDHT
+}
+
+// IsBSDHTDetected returns true if BSDHT was detected during routing setup
+func IsBSDHTDetected() bool {
+	GlobalBSDHTMutex.Lock()
+	defer GlobalBSDHTMutex.Unlock()
+	return GlobalBSDHT != nil
+}
+
 func BaseRouting(cfg *config.Config) interface{} {
 	return func(lc fx.Lifecycle, in processInitialRoutingIn) (out processInitialRoutingOut, err error) {
 		var dualDHT *ddht.DHT
@@ -80,17 +99,27 @@ func BaseRouting(cfg *config.Config) interface{} {
 		}
 
 		var bsDHT *bsdht.BSDHT
+		bsdhtFound := false
+
+		// Debug: Log the router type
+		log.Infof("BaseRouting: Router type is %T", in.Router)
+
+		// Check if BSDHT is already provided by routing config
 		if b, ok := in.Router.(*bsdht.BSDHT); ok {
+			log.Info("BaseRouting: Found BSDHT as direct router")
 			bsDHT = b
+			bsdhtFound = true
 			lc.Append(fx.Hook{
 				OnStop: func(ctx context.Context) error {
 					return bsDHT.Close()
 				},
 			})
 		}
-
+		// Check if it's a ComposableRouter (including *routing.Composer)
 		if cr, ok := in.Router.(routinghelpers.ComposableRouter); ok {
-			for _, r := range cr.Routers() {
+			log.Info("BaseRouting: Router is ComposableRouter, checking routers...")
+			for i, r := range cr.Routers() {
+				log.Infof("BaseRouting: Router[%d] type is %T", i, r)
 				if dht, ok := r.(*ddht.DHT); ok {
 					dualDHT = dht
 					lc.Append(fx.Hook{
@@ -100,7 +129,80 @@ func BaseRouting(cfg *config.Config) interface{} {
 					})
 					break
 				}
+				// Check for BSDHT in ComposableRouter
+				if b, ok := r.(*bsdht.BSDHT); ok {
+					log.Infof("BaseRouting: Found BSDHT in ComposableRouter at index %d", i)
+					bsDHT = b
+					bsdhtFound = true
+					lc.Append(fx.Hook{
+						OnStop: func(ctx context.Context) error {
+							return bsDHT.Close()
+						},
+					})
+				}
 			}
+		} else {
+			// Check if it's a *irouting.Composer
+			if composer, ok := in.Router.(*irouting.Composer); ok {
+				log.Info("BaseRouting: Router is *irouting.Composer, checking router fields...")
+				// Check each router field in Composer
+				routers := []routing.Routing{
+					composer.GetValueRouter,
+					composer.PutValueRouter,
+					composer.FindPeersRouter,
+					composer.FindProvidersRouter,
+					composer.ProvideRouter,
+				}
+
+				routerNames := []string{"GetValueRouter", "PutValueRouter", "FindPeersRouter", "FindProvidersRouter", "ProvideRouter"}
+				for i, r := range routers {
+					if r != nil {
+						log.Infof("BaseRouting: %s type is %T", routerNames[i], r)
+						if dht, ok := r.(*ddht.DHT); ok {
+							dualDHT = dht
+							lc.Append(fx.Hook{
+								OnStop: func(ctx context.Context) error {
+									return dualDHT.Close()
+								},
+							})
+							break
+						}
+						if b, ok := r.(*bsdht.BSDHT); ok {
+							log.Infof("BaseRouting: Found BSDHT in %s", routerNames[i])
+							bsDHT = b
+							bsdhtFound = true
+							lc.Append(fx.Hook{
+								OnStop: func(ctx context.Context) error {
+									return bsDHT.Close()
+								},
+							})
+						}
+					} else {
+						log.Infof("BaseRouting: %s is nil", routerNames[i])
+					}
+				}
+			}
+		}
+
+		// Check if BSDHT is required but not found
+		if cfg.Experimental.HRNSEnabled && !bsdhtFound {
+			log.Error("BaseRouting: HRNS is enabled but no BSDHT router found")
+			return out, fmt.Errorf("HRNS is enabled but no BSDHT router is configured. Please add BSDHT router to your config file")
+		}
+
+		if !bsdhtFound {
+			log.Info("BaseRouting: No BSDHT router found")
+		}
+
+		// Store BSDHT instance globally for DNS resolver replacement
+		if bsDHT != nil {
+			GlobalBSDHTMutex.Lock()
+			GlobalBSDHT = bsDHT
+			GlobalBSDHTMutex.Unlock()
+
+			// Log that BSDHT is now available for DNS resolver
+			log.Info("BSDHT instance stored globally and available for DNS resolver")
+			log.Info("BSDHT detected: setting MinPeerThreshold to 1")
 		}
 
 		if dualDHT != nil && cfg.Routing.AcceleratedDHTClient.WithDefault(config.DefaultAcceleratedDHTClient) {

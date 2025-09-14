@@ -6,6 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os/user"
+	"path/filepath"
+	"strings"
 
 	drclient "github.com/ipfs/boxo/routing/http/client"
 	"github.com/ipfs/boxo/routing/http/contentrouter"
@@ -23,6 +26,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/routing"
 	ma "github.com/multiformats/go-multiaddr"
+	bsdht "github.com/piax/go-byzskip/dht"
 	"go.opencensus.io/stats/view"
 )
 
@@ -95,6 +99,8 @@ func parse(visited map[string]bool,
 		router, err = httpRoutingFromConfig(cfg.Router, extraHTTP)
 	case config.RouterTypeDHT:
 		router, err = dhtRoutingFromConfig(cfg.Router, extraDHT)
+	case config.RouterTypeBSDHT:
+		router, err = bsdhtRoutingFromConfig(cfg.Router, extraDHT)
 	case config.RouterTypeParallel:
 		crp := cfg.Parameters.(*config.ComposableRouterParams)
 		var pr []*routinghelpers.ParallelRouter
@@ -277,6 +283,8 @@ type ExtraDHTParams struct {
 	Validator      record.Validator
 	Datastore      datastore.Batching
 	Context        context.Context
+	RepoPath       string
+	HRNSEnabled    bool
 }
 
 func dhtRoutingFromConfig(conf config.Router, extra *ExtraDHTParams) (routing.Routing, error) {
@@ -302,6 +310,44 @@ func dhtRoutingFromConfig(conf config.Router, extra *ExtraDHTParams) (routing.Ro
 	}
 
 	return createDHT(extra, params.PublicIPNetwork, mode)
+}
+
+func expandPath(path string, repoPath string) string {
+	// Handle tilde expansion
+	if strings.HasPrefix(path, "~") {
+		currentUser, err := user.Current()
+		if err != nil {
+			return path
+		}
+		path = strings.Replace(path, "~", currentUser.HomeDir, 1)
+	}
+
+	// If path is already absolute, return as is
+	if filepath.IsAbs(path) {
+		return path
+	}
+
+	// If path is relative, resolve it relative to repo-dir
+	if repoPath != "" {
+		return filepath.Join(repoPath, path)
+	}
+
+	return path
+}
+
+func bsdhtRoutingFromConfig(conf config.Router, extra *ExtraDHTParams) (routing.Routing, error) {
+	params, ok := conf.Parameters.(*config.BSDHTParams)
+	if !ok {
+		return nil, errors.New("incorrect params for BSDHT router")
+	}
+	params.CertFile = expandPath(params.CertFile, extra.RepoPath)
+	var opts []bsdht.Option
+
+	opts = append(opts,
+		bsdht.BootstrapAddrs(extra.BootstrapPeers))
+
+	return bsdht.NewDHTFromConfig(extra.Host, params.CertFile, params.AuthPubKey, opts...)
+
 }
 
 func createDHT(params *ExtraDHTParams, public bool, mode dht.ModeOpt) (routing.Routing, error) {

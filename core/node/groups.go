@@ -21,7 +21,6 @@ import (
 	"github.com/libp2p/go-libp2p-pubsub/timecache"
 	"github.com/libp2p/go-libp2p/core/peer"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
-	bsdht "github.com/piax/go-byzskip/dht"
 	"go.uber.org/fx"
 )
 
@@ -356,7 +355,7 @@ func Online(bcfg *BuildCfg, cfg *config.Config, userResourceOverrides rcmgr.Part
 		fx.Provide(BitswapOptions(cfg)),
 		fx.Provide(Bitswap(isBitswapServerEnabled, isBitswapLibp2pEnabled, isHTTPRetrievalEnabled)),
 		fx.Provide(OnlineExchange(isBitswapLibp2pEnabled)),
-		fx.Provide(DNSResolver),
+		fx.Provide(BSDHTDNSResolverProvider),
 		fx.Provide(Namesys(ipnsCacheSize, cfg.Ipns.MaxCacheTTL.WithDefault(config.DefaultIpnsMaxCacheTTL))),
 		fx.Provide(Peering),
 		PeerWith(cfg.Peering.Peers...),
@@ -364,7 +363,6 @@ func Online(bcfg *BuildCfg, cfg *config.Config, userResourceOverrides rcmgr.Part
 		fx.Invoke(IpnsRepublisher(repubPeriod, recordLifetime)),
 
 		fx.Provide(p2p.New),
-		bsdht.WithBSDHTResolver(),
 		LibP2P(bcfg, cfg, userResourceOverrides),
 		OnlineProviders(
 			isProviderEnabled,
@@ -380,7 +378,7 @@ func Online(bcfg *BuildCfg, cfg *config.Config, userResourceOverrides rcmgr.Part
 func Offline(cfg *config.Config) fx.Option {
 	return fx.Options(
 		fx.Provide(offline.Exchange),
-		fx.Provide(DNSResolver),
+		fx.Provide(BSDHTDNSResolverProvider),
 		fx.Provide(Namesys(0, 0)),
 		fx.Provide(libp2p.Routing),
 		fx.Provide(libp2p.ContentRouting),
