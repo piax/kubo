@@ -12,11 +12,11 @@ $ popd
 
 At least you have to edit following variables.
 
-`IPFS`: the location of ipfs binary (default is cmd/ipfs/ipfs)
-`REPO_DIR`: the repository directory (default is $HOME/.ipfs)
-`AUTH_PUB_KEY`: the public key string of the authority
-`CERT_FILE`: the name of the cert file (default is $REPO_DIR/pcert)
-`BOOTSTRAP`: the multiaddr of the bootstrap node (only one bootstrap can be specified)
+* `IPFS`: the location of ipfs binary (default is cmd/ipfs/ipfs)
+* `REPO_DIR`: the repository directory (default is $HOME/.ipfs)
+* `AUTH_PUB_KEY`: the public key string of the authority
+* `CERT_FILE`: the name of the cert file (default is $REPO_DIR/pcert)
+* `BOOTSTRAP`: the multiaddr of the bootstrap node (only one bootstrap can be specified)
 
 ## Run config-bsdht.sh
 
