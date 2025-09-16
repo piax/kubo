@@ -676,6 +676,8 @@ github.com/petar/GoLLRB v0.0.0-20210522233825-ae3b015fd3e9 h1:1/WtZae0yGtPq+TI6+
 github.com/petar/GoLLRB v0.0.0-20210522233825-ae3b015fd3e9/go.mod h1:x3N5drFsm2uilKKuuYo6LdyD8vZAW55sH/9w+pbo1sw=
 github.com/piax/go-byzskip v0.1.0 h1:pM26SQQIJayOm7muUXN8SCLl8b13pY85ZXf1+auMjM0=
 github.com/piax/go-byzskip v0.1.0/go.mod h1:1WC9jh4jSFgFnkn+aaHm1Iv7GpT9DjjDn3Ohp/8QiVU=
+github.com/piax/go-byzskip v0.1.1 h1:h26/P9NsGkPSgR8EXUKkCbcylF1fevDKADrSpVCyuYI=
+github.com/piax/go-byzskip v0.1.1/go.mod h1:1WC9jh4jSFgFnkn+aaHm1Iv7GpT9DjjDn3Ohp/8QiVU=
 github.com/pingcap/errors v0.11.4 h1:lFuQV/oaUMGcD2tqt+01ROSmJs75VG1ToEOkZIZ4nE4=
 github.com/pingcap/errors v0.11.4/go.mod h1:Oi8TUi2kEtXXLMJk9l1cGmz20kV3TaQ0usTwv5KuLY8=
 github.com/pion/datachannel v1.5.10 h1:ly0Q26K1i6ZkGf42W7D4hQYR90pZwzFOjTq5AuCKk4o=
