@@ -139,6 +139,9 @@ var ShowCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
+		if nd.BSDHT == nil {
+			return errors.New("routing service is not a BSDHT")
+		}
 		name := nd.BSDHT.Node.Name()
 		id := nd.BSDHT.Node.Id()
 		addr := nd.PeerHost.Addrs()
@@ -386,6 +389,7 @@ func parse(str string) (string, peer.ID) {
 	return name, peerID
 }
 
+// XXX Not implemented yet.
 var TrustCmd = &cmds.Command{
 	Status: cmds.Experimental,
 	Helptext: cmds.HelpText{
