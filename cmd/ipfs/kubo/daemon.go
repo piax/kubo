@@ -985,10 +985,12 @@ func serveHTTPGateway(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, e
 
 		gwLis, err := manet.Listen(gatewayMaddr)
 		if err != nil {
-			return nil, fmt.Errorf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err)
+			// Ignore the error
+			log.Warnf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err)
+		} else {
+			listenerAddrs[string(gatewayMaddr.Bytes())] = true
+			listeners = append(listeners, gwLis)
 		}
-		listenerAddrs[string(gatewayMaddr.Bytes())] = true
-		listeners = append(listeners, gwLis)
 	}
 
 	// we might have listened to /tcp/0 - let's see what we are listing on
