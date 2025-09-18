@@ -57,5 +57,18 @@ $IPFS --repo-dir $REPO_DIR config --json Swarm.RelayClient.Enabled false
 $IPFS --repo-dir $REPO_DIR config --json Swarm.RelayService.Enabled false
 $IPFS --repo-dir $REPO_DIR config --json AutoNAT.ServiceMode '"disabled"'
 
+# Disable Web Transport and WebRTC
+echo "disabling Web Transport and WebRTC"
+$IPFS --repo-dir $REPO_DIR config --json Swarm.Transports.Network.WebTransport false
+$IPFS --repo-dir $REPO_DIR config --json Swarm.Transports.Network.WebRTCDirect false
+$IPFS --repo-dir $REPO_DIR config --json Swarm.Transports.Network.Websocket false
+$IPFS --repo-dir $REPO_DIR config --json AutoTLS.Enabled false
+
+echo "disabling NAT port mapping"
+$IPFS --repo-dir $REPO_DIR config --json Swarm.DisableNatPortMap true
+
+echo "setting MultiAddress"
+$IPFS --repo-dir $REPO_DIR config --json Addresses.Swarm "[\"/ip4/0.0.0.0/tcp/4001\", \"/ip6/::/tcp/4001\", \"/ip4/0.0.0.0/udp/4001/quic-v1\", \"/ip6/::/udp/4001/quic-v1\"]"
+
 echo "Use this PeerID value to get your pcert file."
 grep PeerID $REPO_DIR/config
