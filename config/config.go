@@ -22,6 +22,7 @@ type Config struct {
 	Discovery Discovery // local node's discovery mechanisms
 	Routing   Routing   // local node's routing settings
 	Ipns      Ipns      // Ipns settings
+	HRNS      HRNS      // HRNS settings
 	Bootstrap []string  // local nodes's bootstrap peer addresses
 	Gateway   Gateway   // local node's gateway server options
 	API       API       // local node's API settings

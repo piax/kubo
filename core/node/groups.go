@@ -21,6 +21,7 @@ import (
 	"github.com/libp2p/go-libp2p-pubsub/timecache"
 	"github.com/libp2p/go-libp2p/core/peer"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
+	bsdht "github.com/piax/go-byzskip/dht"
 	"go.uber.org/fx"
 )
 
@@ -343,6 +344,20 @@ func Online(bcfg *BuildCfg, cfg *config.Config, userResourceOverrides rcmgr.Part
 		recordLifetime = d
 	}
 
+	// HRNS republisher params
+	var hrnsRepubPeriod time.Duration
+	if cfg.Experimental.HRNSEnabled {
+		if cfg.HRNS.RepublishPeriod != "" {
+			d, err := time.ParseDuration(cfg.HRNS.RepublishPeriod)
+			if err != nil {
+				return fx.Error(fmt.Errorf("failure to parse config setting HRNS.RepublishPeriod: %s", err))
+			}
+			hrnsRepubPeriod = d
+		} else {
+			hrnsRepubPeriod = time.Hour // Default: 1 hour
+		}
+	}
+
 	isBitswapLibp2pEnabled := cfg.Bitswap.Libp2pEnabled.WithDefault(config.DefaultBitswapLibp2pEnabled)
 	isBitswapServerEnabled := cfg.Bitswap.ServerEnabled.WithDefault(config.DefaultBitswapServerEnabled)
 	isHTTPRetrievalEnabled := cfg.HTTPRetrieval.Enabled.WithDefault(config.DefaultHTTPRetrievalEnabled)
@@ -361,6 +376,9 @@ func Online(bcfg *BuildCfg, cfg *config.Config, userResourceOverrides rcmgr.Part
 		PeerWith(cfg.Peering.Peers...),
 
 		fx.Invoke(IpnsRepublisher(repubPeriod, recordLifetime)),
+
+		// Add HRNS republisher
+		maybeInvoke(bsdht.HRNSRepublisher(hrnsRepubPeriod), cfg.Experimental.HRNSEnabled),
 
 		fx.Provide(p2p.New),
 		LibP2P(bcfg, cfg, userResourceOverrides),
