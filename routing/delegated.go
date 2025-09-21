@@ -344,6 +344,7 @@ func bsdhtRoutingFromConfig(conf config.Router, extra *ExtraDHTParams) (routing.
 	var opts []bsdht.Option
 
 	opts = append(opts,
+		bsdht.Datastore(extra.Datastore),
 		bsdht.BootstrapAddrs(extra.BootstrapPeers))
 
 	return bsdht.NewDHTFromConfig(extra.Host, params.CertFile, params.AuthPubKey, opts...)
