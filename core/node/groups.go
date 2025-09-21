@@ -255,7 +255,7 @@ func Storage(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 			cacheOpts,
 			cfg.Datastore.HashOnRead,
 			cfg.Datastore.WriteThrough.WithDefault(config.DefaultWriteThrough),
-			cfg.Reprovider.Strategy.WithDefault(config.DefaultReproviderStrategy),
+			cfg.Provide.Strategy.WithDefault(config.DefaultProvideStrategy),
 		)),
 		finalBstore,
 	)
@@ -362,9 +362,9 @@ func Online(bcfg *BuildCfg, cfg *config.Config, userResourceOverrides rcmgr.Part
 	isBitswapServerEnabled := cfg.Bitswap.ServerEnabled.WithDefault(config.DefaultBitswapServerEnabled)
 	isHTTPRetrievalEnabled := cfg.HTTPRetrieval.Enabled.WithDefault(config.DefaultHTTPRetrievalEnabled)
 
-	// Right now Provider and Reprovider systems are tied together - disabling Reprovider by setting interval to 0 disables Provider
-	// and vice versa: Provider.Enabled=false will disable both Provider of new CIDs and the Reprovider of old ones.
-	isProviderEnabled := cfg.Provider.Enabled.WithDefault(config.DefaultProviderEnabled) && cfg.Reprovider.Interval.WithDefault(config.DefaultReproviderInterval) != 0
+	// The Provide system handles both new CID announcements and periodic re-announcements.
+	// Disabling is controlled by Provide.Enabled=false or setting Interval to 0.
+	isProviderEnabled := cfg.Provide.Enabled.WithDefault(config.DefaultProvideEnabled) && cfg.Provide.DHT.Interval.WithDefault(config.DefaultProvideDHTInterval) != 0
 
 	return fx.Options(
 		fx.Provide(BitswapOptions(cfg)),
@@ -382,13 +382,7 @@ func Online(bcfg *BuildCfg, cfg *config.Config, userResourceOverrides rcmgr.Part
 
 		fx.Provide(p2p.New),
 		LibP2P(bcfg, cfg, userResourceOverrides),
-		OnlineProviders(
-			isProviderEnabled,
-			cfg.Reprovider.Strategy.WithDefault(config.DefaultReproviderStrategy),
-			cfg.Reprovider.Interval.WithDefault(config.DefaultReproviderInterval),
-			cfg.Routing.AcceleratedDHTClient.WithDefault(config.DefaultAcceleratedDHTClient),
-			int(cfg.Provider.WorkerCount.WithDefault(config.DefaultProviderWorkerCount)),
-		),
+		OnlineProviders(isProviderEnabled, cfg),
 	)
 }
 
@@ -454,6 +448,11 @@ func IPFS(ctx context.Context, bcfg *BuildCfg) fx.Option {
 		return fx.Error(err)
 	}
 
+	// Validate Provide configuration
+	if err := config.ValidateProvideConfig(&cfg.Provide); err != nil {
+		return fx.Error(err)
+	}
+
 	// Auto-sharding settings
 	shardingThresholdString := cfg.Import.UnixFSHAMTDirectorySizeThreshold.WithDefault(config.DefaultUnixFSHAMTDirectorySizeThreshold)
 	shardSingThresholdInt, err := humanize.ParseBytes(shardingThresholdString)
@@ -465,7 +464,7 @@ func IPFS(ctx context.Context, bcfg *BuildCfg) fx.Option {
 	uio.HAMTShardingSize = int(shardSingThresholdInt)
 	uio.DefaultShardWidth = int(shardMaxFanout)
 
-	providerStrategy := cfg.Reprovider.Strategy.WithDefault(config.DefaultReproviderStrategy)
+	providerStrategy := cfg.Provide.Strategy.WithDefault(config.DefaultProvideStrategy)
 
 	return fx.Options(
 		bcfgOpts,
