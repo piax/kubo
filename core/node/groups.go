@@ -21,7 +21,6 @@ import (
 	"github.com/libp2p/go-libp2p-pubsub/timecache"
 	"github.com/libp2p/go-libp2p/core/peer"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
-	bsdht "github.com/piax/go-byzskip/dht"
 	"go.uber.org/fx"
 )
 
@@ -354,7 +353,7 @@ func Online(bcfg *BuildCfg, cfg *config.Config, userResourceOverrides rcmgr.Part
 			}
 			hrnsRepubPeriod = d
 		} else {
-			hrnsRepubPeriod = time.Hour // Default: 1 hour
+			hrnsRepubPeriod = DEFAULT_REPUBLISH_PERIOD
 		}
 	}
 
@@ -378,7 +377,7 @@ func Online(bcfg *BuildCfg, cfg *config.Config, userResourceOverrides rcmgr.Part
 		fx.Invoke(IpnsRepublisher(repubPeriod, recordLifetime)),
 
 		// Add HRNS republisher
-		maybeInvoke(bsdht.HRNSRepublisher(hrnsRepubPeriod), cfg.Experimental.HRNSEnabled),
+		maybeInvoke(HRNSRepublisher(hrnsRepubPeriod), cfg.Experimental.HRNSEnabled),
 
 		fx.Provide(p2p.New),
 		LibP2P(bcfg, cfg, userResourceOverrides),

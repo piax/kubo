@@ -6,20 +6,25 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/ipfs/boxo/gateway"
 	"github.com/ipfs/boxo/path"
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	"github.com/ipfs/kubo/client/rpc"
+	"github.com/ipfs/kubo/config"
 	"github.com/ipfs/kubo/core/commands/cmdenv"
 	"github.com/ipfs/kubo/repo/fsrepo"
+	"github.com/libp2p/go-doh-resolver"
 	"github.com/libp2p/go-libp2p/core/peer"
 	madns "github.com/multiformats/go-multiaddr-dns"
 	"github.com/piax/go-byzskip/authority"
 	ayame "github.com/piax/go-byzskip/ayame/p2p"
+	bsdht "github.com/piax/go-byzskip/dht"
 )
 
 var HrnsCmd = &cmds.Command{
@@ -571,3 +576,42 @@ var PeersCmd = &cmds.Command{
 	},
 	Type: BsnsEntry{},
 }
+
+// BSDHTDNSResolver replaces the default DNSResolver function in Kubo
+// This function can be used to replace fx.Provide(DNSResolver) in the dependency injection
+func BSDHTDNSResolver(cfg *config.Config, bs *bsdht.BSDHT) (*madns.Resolver, error) {
+	if bs == nil {
+		// Fall back to original DNSResolver if BSDHT is not available
+		return originalDNSResolver(cfg)
+	}
+
+	// Create a new resolver instance that delegates to BSDHT
+	newResolver, err := madns.NewResolver(
+		madns.WithDefaultResolver(bs),
+	)
+	if err != nil {
+		// Fall back to original DNSResolver on error
+		return originalDNSResolver(cfg)
+	}
+
+	return newResolver, nil
+}
+
+// originalDNSResolver is a copy of the original DNSResolver function from Kubo
+// This is used as a fallback when BSDHT is not available
+func originalDNSResolver(cfg *config.Config) (*madns.Resolver, error) {
+	var dohOpts []doh.Option
+	if !cfg.DNS.MaxCacheTTL.IsDefault() {
+		dohOpts = append(dohOpts, doh.WithMaxCacheTTL(cfg.DNS.MaxCacheTTL.WithDefault(time.Duration(math.MaxUint32)*time.Second)))
+	}
+
+	return gateway.NewDNSResolver(cfg.DNS.Resolvers, dohOpts...)
+}
+
+// trust name
+// byte-stream.abcde:id-1
+// byzskip.org:id-2
+// Suppose we have something like this.
+// The prefix "by" is not unique. In this case, suppose we trusted "byte-stream.abcde:id-1".
+// This means we trusted node id-1.
+// If we force resolution with "by", it would return "byte-stream.abcde".

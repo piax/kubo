@@ -684,6 +684,8 @@ github.com/piax/go-byzskip v0.1.1 h1:h26/P9NsGkPSgR8EXUKkCbcylF1fevDKADrSpVCyuYI
 github.com/piax/go-byzskip v0.1.1/go.mod h1:1WC9jh4jSFgFnkn+aaHm1Iv7GpT9DjjDn3Ohp/8QiVU=
 github.com/piax/go-byzskip v0.1.2 h1:hmxh8khHf3PEs8mC3mA7SnQF3F0xUUFHp3lNnY682Hs=
 github.com/piax/go-byzskip v0.1.2/go.mod h1:1WC9jh4jSFgFnkn+aaHm1Iv7GpT9DjjDn3Ohp/8QiVU=
+github.com/piax/go-byzskip v0.1.3 h1:5I94zr5jVHfDvkdQjJHyS8NwurflnG/P/j+xH8KhB2o=
+github.com/piax/go-byzskip v0.1.3/go.mod h1:g6rAZoOLQWzTesllvZ9Z3Ist3FAw9WFiis3iljNWYzw=
 github.com/pingcap/errors v0.11.4 h1:lFuQV/oaUMGcD2tqt+01ROSmJs75VG1ToEOkZIZ4nE4=
 github.com/pingcap/errors v0.11.4/go.mod h1:Oi8TUi2kEtXXLMJk9l1cGmz20kV3TaQ0usTwv5KuLY8=
 github.com/pion/datachannel v1.5.10 h1:ly0Q26K1i6ZkGf42W7D4hQYR90pZwzFOjTq5AuCKk4o=
